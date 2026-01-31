@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Modern Dark/Glass Palette */
+  --bg-dark: #0f172a;
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  font-family: var(--font-family);
+  @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-fuchsia-50 transition-colors duration-300;
+  -webkit-font-smoothing: antialiased;
+}
