@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { API_BASE_URL } from '../config';
 import type { Expense } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -38,7 +39,7 @@ export const ExpenseProvider = ({ children }: { children: ReactNode }) => {
     const fetchExpenses = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('/api/expenses', {
+            const res = await fetch(`${API_BASE_URL}/api/expenses`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -53,7 +54,7 @@ export const ExpenseProvider = ({ children }: { children: ReactNode }) => {
     const addExpense = async (newExpense: Omit<Expense, 'id' | 'date'>) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('/api/expenses', {
+            const res = await fetch(`${API_BASE_URL}/api/expenses`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -74,7 +75,7 @@ export const ExpenseProvider = ({ children }: { children: ReactNode }) => {
     const deleteExpense = async (id: string) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`/api/expenses/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/api/expenses/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
