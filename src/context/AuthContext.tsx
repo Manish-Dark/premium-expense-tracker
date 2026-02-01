@@ -4,105 +4,164 @@ import type { ReactNode } from 'react';
 export interface User {
     id: string;
     username: string;
-    password?: string; // Optional when exposing to UI, but used internally
     role: 'admin' | 'user';
+    password?: string; // Optional: specific to admin view
+    createdAt?: string;
 }
 
 interface AuthContextType {
     isAuthenticated: boolean;
     user: User | null;
-    users: User[]; // List of managed users
+    users: User[]; // List of managed users (admin only)
     login: (username: string, pass: string) => Promise<boolean>;
     logout: () => void;
-    addUser: (user: Omit<User, 'id' | 'role'>) => void;
-    updateUser: (id: string, updates: Partial<Omit<User, 'id' | 'role'>>) => void;
-    deleteUser: (id: string) => void;
+    addUser: (user: Omit<User, 'id' | 'role'>) => Promise<void>;
+    updateUser: (id: string, updates: Partial<Omit<User, 'id' | 'role'>>) => Promise<void>;
+    deleteUser: (id: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Default seed user
-const DEFAULT_USER = {
-    id: 'default-user',
-    username: 'joy124',
-    password: 'joy@123',
-    role: 'user' as const
-};
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [user, setUser] = useState<User | null>(null);
-    const [users, setUsers] = useState<User[]>(() => {
-        const saved = localStorage.getItem('app_users');
-        return saved ? JSON.parse(saved) : [DEFAULT_USER];
-    });
+    const [users, setUsers] = useState<User[]>([]);
 
-    // Persist users when they change
+    // Check for persisted session and validate token
     useEffect(() => {
-        localStorage.setItem('app_users', JSON.stringify(users));
-    }, [users]);
-
-    // Check for persisted session
-    useEffect(() => {
-        const storedAuth = localStorage.getItem('isAuthenticated');
-        const storedUser = localStorage.getItem('user');
-        if (storedAuth === 'true' && storedUser) {
-            setIsAuthenticated(true);
-            setUser(JSON.parse(storedUser));
+        const token = localStorage.getItem('token');
+        if (token) {
+            fetch('/api/auth/user', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => {
+                    if (res.ok) return res.json();
+                    throw new Error('Invalid token');
+                })
+                .then((userData: User) => {
+                    setIsAuthenticated(true);
+                    setUser(userData);
+                })
+                .catch(() => {
+                    logout(); // Invalid token
+                });
         }
     }, []);
 
-    const login = async (username: string, pass: string): Promise<boolean> => {
-        // 1. Check Admin
-        if (username === 'Manish1212' && pass === 'Manish@2004') {
-            const adminUser: User = { id: 'admin', username: 'Manish1212', role: 'admin' };
-            setSession(adminUser);
-            return true;
+    // Load users if admin
+    useEffect(() => {
+        if (isAuthenticated && user?.role === 'admin') {
+            fetchUsers();
+        } else {
+            setUsers([]);
         }
+    }, [isAuthenticated, user]);
 
-        // 2. Check Users
-        const foundUser = users.find(u => u.username === username && u.password === pass);
-        if (foundUser) {
-            // Don't store password in session
-            const { password, ...safeUser } = foundUser;
-            setSession(safeUser as User);
-            return true;
+    const fetchUsers = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/users', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setUsers(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch users', error);
         }
-
-        return false;
     };
 
-    const setSession = (userData: User) => {
-        setIsAuthenticated(true);
-        setUser(userData);
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('user', JSON.stringify(userData));
+    const login = async (username: string, pass: string): Promise<boolean> => {
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password: pass })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('token', data.token);
+                setIsAuthenticated(true);
+                setUser(data.user);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Login error', error);
+            return false;
+        }
     };
 
     const logout = () => {
         setIsAuthenticated(false);
         setUser(null);
-        localStorage.removeItem('isAuthenticated');
-        localStorage.removeItem('user');
+        setUsers([]);
+        localStorage.removeItem('token');
     };
 
     // --- Admin Functions ---
 
-    const addUser = (newUser: Omit<User, 'id' | 'role'>) => {
-        const userWithId: User = {
-            ...newUser,
-            id: crypto.randomUUID(),
-            role: 'user'
-        };
-        setUsers(prev => [...prev, userWithId]);
+    const addUser = async (newUser: any) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(newUser)
+            });
+
+            if (res.ok) {
+                await fetchUsers(); // Refresh list
+            } else {
+                alert('Failed to create user');
+            }
+        } catch (error) {
+            console.error(error);
+        }
     };
 
-    const updateUser = (id: string, updates: Partial<Omit<User, 'id' | 'role'>>) => {
-        setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    const updateUser = async (id: string, updates: any) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(updates)
+            });
+
+            if (res.ok) {
+                await fetchUsers();
+            }
+        } catch (error) {
+            console.error(error);
+        }
     };
 
-    const deleteUser = (id: string) => {
-        setUsers(prev => prev.filter(u => u.id !== id));
+    const deleteUser = async (id: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/users/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                await fetchUsers();
+            } else {
+                const err = await res.json();
+                alert(err.message || 'Failed to delete');
+            }
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     return (

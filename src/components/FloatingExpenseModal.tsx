@@ -13,11 +13,11 @@ export const FloatingExpenseModal = () => {
     const [category, setCategory] = useState<Category>('Food');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Zomato');
 
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!amount) return;
 
-        addExpense({
+        await addExpense({
             amount: parseFloat(amount),
             description: description || category,
             category,

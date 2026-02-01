@@ -9,6 +9,10 @@ export const Dashboard = () => {
 
     return (
         <div className="pb-24">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Dashboard</h1>
+            </div>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-indigo-500/30 p-6 rounded-2xl backdrop-blur-md shadow-sm dark:shadow-lg dark:shadow-indigo-900/10">

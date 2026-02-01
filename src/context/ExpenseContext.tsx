@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Expense } from '../types';
+import { useAuth } from './AuthContext';
 
 interface ExpenseContextType {
     expenses: Expense[];
-    addExpense: (expense: Omit<Expense, 'id' | 'date'>) => void;
-    deleteExpense: (id: string) => void;
+    addExpense: (expense: Omit<Expense, 'id' | 'date'>) => Promise<void>;
+    deleteExpense: (id: string) => Promise<void>;
     filter: 'weekly' | 'monthly' | 'yearly';
     setFilter: (filter: 'weekly' | 'monthly' | 'yearly') => void;
     totalExpenses: number;
@@ -21,28 +22,69 @@ export const useExpense = () => {
 };
 
 export const ExpenseProvider = ({ children }: { children: ReactNode }) => {
-    const [expenses, setExpenses] = useState<Expense[]>(() => {
-        const saved = localStorage.getItem('expenses');
-        return saved ? JSON.parse(saved) : [];
-    });
-
+    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [filter, setFilter] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+    const { isAuthenticated } = useAuth();
 
+    // Fetch expenses on login/auth change
     useEffect(() => {
-        localStorage.setItem('expenses', JSON.stringify(expenses));
-    }, [expenses]);
+        if (isAuthenticated) {
+            fetchExpenses();
+        } else {
+            setExpenses([]);
+        }
+    }, [isAuthenticated]);
 
-    const addExpense = (newExpense: Omit<Expense, 'id' | 'date'>) => {
-        const expense: Expense = {
-            ...newExpense,
-            id: crypto.randomUUID(),
-            date: new Date().toISOString(),
-        };
-        setExpenses((prev) => [expense, ...prev]);
+    const fetchExpenses = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/expenses', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setExpenses(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch expenses', error);
+        }
     };
 
-    const deleteExpense = (id: string) => {
-        setExpenses((prev) => prev.filter((ex) => ex.id !== id));
+    const addExpense = async (newExpense: Omit<Expense, 'id' | 'date'>) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/expenses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(newExpense)
+            });
+
+            if (res.ok) {
+                const savedExpense = await res.json();
+                setExpenses((prev) => [savedExpense, ...prev]);
+            }
+        } catch (error) {
+            console.error('Failed to add expense', error);
+        }
+    };
+
+    const deleteExpense = async (id: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/expenses/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                setExpenses((prev) => prev.filter((ex) => ex.id !== id));
+            }
+        } catch (error) {
+            console.error('Failed to delete expense', error);
+        }
     };
 
     const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
