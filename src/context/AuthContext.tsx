@@ -129,7 +129,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateUser = async (id: string, updates: any) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`/api/users/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/api/users/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const deleteUser = async (id: string) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`/api/users/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/api/users/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
