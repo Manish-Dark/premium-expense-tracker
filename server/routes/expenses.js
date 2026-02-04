@@ -66,6 +66,52 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
+// @route   PUT api/expenses/:id
+// @desc    Update expense
+// @access  Private
+router.put('/:id', auth, async (req, res) => {
+    const { description, amount, category, date, paymentMethod } = req.body;
+
+    try {
+        let expense = await Expense.findById(req.params.id);
+
+        if (!expense) {
+            return res.status(404).json({ message: 'Expense not found' });
+        }
+
+        // Make sure user owns expense
+        if (expense.user.toString() !== req.user.id) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const expenseFields = {};
+        if (description) expenseFields.description = description;
+        if (amount) expenseFields.amount = amount;
+        if (category) expenseFields.category = category;
+        if (date) expenseFields.date = date;
+        if (paymentMethod) expenseFields.paymentMethod = paymentMethod;
+
+        expense = await Expense.findByIdAndUpdate(
+            req.params.id,
+            { $set: expenseFields },
+            { new: true }
+        );
+
+        res.json({
+            id: expense._id,
+            description: expense.description,
+            amount: expense.amount,
+            category: expense.category,
+            date: expense.date,
+            paymentMethod: expense.paymentMethod,
+            username: expense.username
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // @route   DELETE api/expenses/:id
 // @desc    Delete expense
 // @access  Private

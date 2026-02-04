@@ -1,8 +1,7 @@
 import React from 'react';
 import { useExpense } from '../context/ExpenseContext';
-import { Trash2, ShoppingBag, Utensils, Zap, ShoppingCart, Film, Heart, FileSpreadsheet, FileText } from 'lucide-react';
-import type { Category, PaymentMethod } from '../types';
-import { exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { ShoppingBag, Utensils, Zap, ShoppingCart, Film, Heart } from 'lucide-react';
+import type { Category, PaymentMethod, Expense } from '../types';
 
 const CategoryIcons: Record<Category, React.ReactNode> = {
     'Food': <Utensils size={18} />,
@@ -26,12 +25,16 @@ const PaymentStyles: Record<PaymentMethod, string> = {
     'Other': 'text-slate-400 bg-slate-500/10 border-slate-500/20',
 };
 
-export const ExpenseList: React.FC = () => {
-    const { expenses, deleteExpense } = useExpense();
+interface ExpenseListProps {
+    onEdit?: (expense: Expense) => void;
+}
+
+export const ExpenseList: React.FC<ExpenseListProps> = () => {
+    const { expenses } = useExpense();
 
     if (expenses.length === 0) {
         return (
-            <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-8 text-center flex flex-col items-center">
+            <div id="expense-list" className="bg-slate-900/50 border border-white/5 rounded-2xl p-8 text-center flex flex-col items-center">
                 <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mb-4 text-slate-600">
                     <ShoppingBag size={24} />
                 </div>
@@ -42,30 +45,12 @@ export const ExpenseList: React.FC = () => {
     }
 
     return (
-        <div className="bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-sm dark:shadow-none">
+        <div id="expense-list" className="bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-sm dark:shadow-none">
             <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between">
                 <h3 className="font-semibold text-slate-800 dark:text-slate-200">Recent Transactions</h3>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => exportToExcel(expenses)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                        title="Export to Excel"
-                    >
-                        <FileSpreadsheet size={16} />
-                        <span className="hidden sm:inline">Excel</span>
-                    </button>
-                    <button
-                        onClick={() => exportToPDF(expenses)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                        title="Export to PDF"
-                    >
-                        <FileText size={16} />
-                        <span className="hidden sm:inline">PDF</span>
-                    </button>
-                </div>
             </div>
             <div className="divide-y divide-slate-200 dark:divide-white/5 max-h-[500px] overflow-y-auto">
-                {expenses.map((expense) => (
+                {expenses.slice(0, 10).map((expense) => (
                     <div key={expense.id} className="group p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
                         <div className="flex items-center gap-4">
                             <div className={`p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-300`}>
@@ -88,13 +73,6 @@ export const ExpenseList: React.FC = () => {
                             <span className="font-bold text-slate-900 dark:text-slate-100 text-lg">
                                 -₹{expense.amount.toFixed(2)}
                             </span>
-                            <button
-                                onClick={() => deleteExpense(expense.id)}
-                                className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-500/10 rounded-lg transition-all"
-                                title="Delete"
-                            >
-                                <Trash2 size={18} />
-                            </button>
                         </div>
                     </div>
                 ))}

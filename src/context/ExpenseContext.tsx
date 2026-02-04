@@ -6,6 +6,7 @@ import { useAuth } from './AuthContext';
 interface ExpenseContextType {
     expenses: Expense[];
     addExpense: (expense: Omit<Expense, 'id' | 'date'>) => Promise<void>;
+    updateExpense: (id: string, expense: Partial<Omit<Expense, 'id' | 'date'>>) => Promise<void>;
     deleteExpense: (id: string) => Promise<void>;
     filter: 'weekly' | 'monthly' | 'yearly';
     setFilter: (filter: 'weekly' | 'monthly' | 'yearly') => void;
@@ -72,6 +73,27 @@ export const ExpenseProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const updateExpense = async (id: string, updatedExpense: Partial<Omit<Expense, 'id' | 'date'>>) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_BASE_URL}/api/expenses/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(updatedExpense)
+            });
+
+            if (res.ok) {
+                const savedExpense = await res.json();
+                setExpenses((prev) => prev.map(ex => ex.id === id ? savedExpense : ex));
+            }
+        } catch (error) {
+            console.error('Failed to update expense', error);
+        }
+    };
+
     const deleteExpense = async (id: string) => {
         try {
             const token = localStorage.getItem('token');
@@ -91,7 +113,7 @@ export const ExpenseProvider = ({ children }: { children: ReactNode }) => {
     const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
 
     return (
-        <ExpenseContext.Provider value={{ expenses, addExpense, deleteExpense, filter, setFilter, totalExpenses }}>
+        <ExpenseContext.Provider value={{ expenses, addExpense, updateExpense, deleteExpense, filter, setFilter, totalExpenses }}>
             {children}
         </ExpenseContext.Provider>
     );

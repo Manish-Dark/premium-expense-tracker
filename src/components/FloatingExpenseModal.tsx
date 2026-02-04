@@ -1,11 +1,27 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useExpense } from '../context/ExpenseContext';
-import { CATEGORIES, PAYMENT_METHODS, type Category, type PaymentMethod } from '../types';
+import { CATEGORIES, PAYMENT_METHODS, type Category, type PaymentMethod, type Expense } from '../types';
 import { Plus, X, Receipt, Smartphone } from 'lucide-react';
 
-export const FloatingExpenseModal = () => {
-    const { addExpense } = useExpense();
-    const [isOpen, setIsOpen] = useState(false);
+interface ExpenseModalProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+    expenseToEdit?: Expense | null;
+}
+
+export const FloatingExpenseModal = ({ isOpen: externalIsOpen, onClose: externalOnClose, expenseToEdit }: ExpenseModalProps) => {
+    const { addExpense, updateExpense } = useExpense();
+    const [internalIsOpen, setInternalIsOpen] = useState(false);
+
+    const isControlled = externalIsOpen !== undefined;
+    const showModal = isControlled ? externalIsOpen : internalIsOpen;
+    const closeModal = () => {
+        if (isControlled && externalOnClose) {
+            externalOnClose();
+        } else {
+            setInternalIsOpen(false);
+        }
+    };
 
     // Form State
     const [amount, setAmount] = useState('');
@@ -13,41 +29,82 @@ export const FloatingExpenseModal = () => {
     const [category, setCategory] = useState<Category>('Food');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Zomato');
 
+    // Effect to populate form when editing
+    useEffect(() => {
+        if (expenseToEdit) {
+            setAmount(expenseToEdit.amount.toString());
+            setDescription(expenseToEdit.description);
+            setCategory(expenseToEdit.category);
+            setPaymentMethod(expenseToEdit.paymentMethod);
+        } else {
+            // Reset if opening for "Add" (only if not already set by user interaction, but here we assume a fresh open implies reset or passed prop implies value)
+            if (!showModal) {
+                // When modal closes, reset. But we can also check if just opened without edit.
+            }
+        }
+    }, [expenseToEdit, showModal]);
+
+    // Reset form on close
+    useEffect(() => {
+        if (!showModal) {
+            setAmount('');
+            setDescription('');
+            setCategory('Food');
+            setPaymentMethod('Zomato');
+        }
+    }, [showModal]);
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!amount) return;
 
-        await addExpense({
-            amount: parseFloat(amount),
-            description: description || category,
-            category,
-            paymentMethod,
-        });
+        if (expenseToEdit) {
+            await updateExpense(expenseToEdit.id, {
+                amount: parseFloat(amount),
+                description: description || category,
+                category,
+                paymentMethod,
+            });
+        } else {
+            await addExpense({
+                amount: parseFloat(amount),
+                description: description || category,
+                category,
+                paymentMethod,
+            });
+        }
 
-        // Reset
+        // Reset and Close
         setAmount('');
         setDescription('');
-        setIsOpen(false);
+        closeModal();
     };
 
     return (
         <>
-            {/* Floating Action Button */}
-            <button
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-8 right-8 z-50 p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 group"
-                title="Add New Expense"
-            >
-                <Plus size={24} className="group-hover:rotate-90 transition-transform" />
-                <span className="hidden md:block font-medium pr-2">Add Expense</span>
-            </button>
+            {/* Floating Action Button - Only show if NOT controlled (legacy behavior) or if we want it always? 
+                The user wants specific buttons. I will hide the FAB if controlled, 
+                assuming the parent handles the trigger. 
+                Actually, the Dashboard will use this component. 
+                If I don't pass isOpen, it behaves as before.
+            */}
+            {!isControlled && (
+                <button
+                    onClick={() => setInternalIsOpen(true)}
+                    className="fixed bottom-8 right-8 z-50 p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 group"
+                    title="Add New Expense"
+                >
+                    <Plus size={24} className="group-hover:rotate-90 transition-transform" />
+                    <span className="hidden md:block font-medium pr-2">Add Expense</span>
+                </button>
+            )}
 
             {/* Modal Overlay */}
-            {isOpen && (
+            {showModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                     <div
                         className="absolute inset-0 bg-slate-950/20 dark:bg-slate-950/80 backdrop-blur-sm"
-                        onClick={() => setIsOpen(false)}
+                        onClick={closeModal}
                     />
 
                     <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -55,10 +112,10 @@ export const FloatingExpenseModal = () => {
                         <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-between items-center">
                             <h2 className="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
                                 <Receipt size={20} className="text-indigo-500 dark:text-indigo-400" />
-                                Add Transaction
+                                {expenseToEdit ? 'Update Transaction' : 'Add Transaction'}
                             </h2>
                             <button
-                                onClick={() => setIsOpen(false)}
+                                onClick={closeModal}
                                 className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
                             >
                                 <X size={20} />
@@ -129,7 +186,7 @@ export const FloatingExpenseModal = () => {
                                 type="submit"
                                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-indigo-600/25 transition-all active:scale-[0.98] mt-2"
                             >
-                                Add Transaction
+                                {expenseToEdit ? 'Update Transaction' : 'Add Transaction'}
                             </button>
                         </form>
                     </div>
