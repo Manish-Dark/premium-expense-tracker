@@ -5,8 +5,8 @@ import { useAuth } from './AuthContext';
 
 interface ExpenseContextType {
     expenses: Expense[];
-    addExpense: (expense: Omit<Expense, 'id' | 'date'>) => Promise<void>;
-    updateExpense: (id: string, expense: Partial<Omit<Expense, 'id' | 'date'>>) => Promise<void>;
+    addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
+    updateExpense: (id: string, expense: Partial<Omit<Expense, 'id'>>) => Promise<void>;
     deleteExpense: (id: string) => Promise<void>;
     filter: 'weekly' | 'monthly' | 'yearly';
     setFilter: (filter: 'weekly' | 'monthly' | 'yearly') => void;
@@ -52,7 +52,7 @@ export const ExpenseProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const addExpense = async (newExpense: Omit<Expense, 'id' | 'date'>) => {
+    const addExpense = async (newExpense: Omit<Expense, 'id'>) => {
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${API_BASE_URL}/api/expenses`, {
@@ -73,7 +73,7 @@ export const ExpenseProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const updateExpense = async (id: string, updatedExpense: Partial<Omit<Expense, 'id' | 'date'>>) => {
+    const updateExpense = async (id: string, updatedExpense: Partial<Omit<Expense, 'id'>>) => {
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${API_BASE_URL}/api/expenses/${id}`, {
@@ -88,9 +88,20 @@ export const ExpenseProvider = ({ children }: { children: ReactNode }) => {
             if (res.ok) {
                 const savedExpense = await res.json();
                 setExpenses((prev) => prev.map(ex => ex.id === id ? savedExpense : ex));
+                await fetchExpenses(); // Refresh from server to ensure data persistence
+            } else {
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.message || 'Failed to update expense');
+                } else {
+                    const text = await res.text();
+                    throw new Error(`Server error: ${res.status} ${res.statusText} - ${text}`);
+                }
             }
         } catch (error) {
             console.error('Failed to update expense', error);
+            throw error;
         }
     };
 

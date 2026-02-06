@@ -27,6 +27,7 @@ export const Login: React.FC = () => {
         const success = await login(username, password);
         if (!success) {
             setError('Invalid credentials');
+            console.error('Login failed');
         }
         // Navigation is handled by useEffect
     };

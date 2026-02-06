@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useExpense } from '../context/ExpenseContext';
 import { Edit3, Calendar, AlertCircle, CheckCircle2, Search, Trash2 } from 'lucide-react';
-import type { Expense } from '../types';
+import { CATEGORIES, PAYMENT_METHODS } from '../types';
+import type { Expense, Category, PaymentMethod } from '../types';
 
 export const UpdateTransaction = () => {
     const { expenses, updateExpense, deleteExpense } = useExpense();
@@ -14,11 +15,21 @@ export const UpdateTransaction = () => {
     // Form state for selected expense
     const [editAmount, setEditAmount] = useState('');
     const [editDescription, setEditDescription] = useState('');
+    const [editCategory, setEditCategory] = useState<Category>('Other');
+    const [editDate, setEditDate] = useState('');
+    const [editPaymentMethod, setEditPaymentMethod] = useState<PaymentMethod>('Cash');
 
     // UI Feedback
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
-    const handleShowTransactions = () => {
+    // Auto-refresh results when expenses change
+    useEffect(() => {
+        if (hasSearched) {
+            handleShowTransactions(true);
+        }
+    }, [expenses]);
+
+    const handleShowTransactions = (keepSelection = false) => {
         if (!startDate || !endDate) {
             alert("Please select both start and end dates.");
             return;
@@ -36,13 +47,18 @@ export const UpdateTransaction = () => {
 
         setDisplayedExpenses(filtered);
         setHasSearched(true);
-        setSelectedExpense(null); // Clear selection on new search
+        if (!keepSelection) {
+            setSelectedExpense(null); // Clear selection on new search
+        }
     };
 
     const handleRowClick = (expense: Expense) => {
         setSelectedExpense(expense);
         setEditAmount(expense.amount.toString());
         setEditDescription(expense.description);
+        setEditCategory(expense.category);
+        setEditDate(new Date(expense.date).toISOString().split('T')[0]);
+        setEditPaymentMethod(expense.paymentMethod);
         setStatus(null); // Clear previous status
     };
 
@@ -53,14 +69,24 @@ export const UpdateTransaction = () => {
         try {
             await updateExpense(selectedExpense.id, {
                 amount: parseFloat(editAmount),
-                description: editDescription
+                description: editDescription,
+                category: editCategory,
+                date: new Date(editDate).toISOString(),
+                paymentMethod: editPaymentMethod
             });
 
             setStatus({ type: 'success', message: 'Transaction updated successfully!' });
 
             // Update the local displayed list to reflect changes immediately
             setDisplayedExpenses(prev => prev.map(ex =>
-                ex.id === selectedExpense.id ? { ...ex, amount: parseFloat(editAmount), description: editDescription } : ex
+                ex.id === selectedExpense.id ? {
+                    ...ex,
+                    amount: parseFloat(editAmount),
+                    description: editDescription,
+                    category: editCategory,
+                    date: new Date(editDate).toISOString(),
+                    paymentMethod: editPaymentMethod
+                } : ex
             ));
 
             // Reset selection but keep view
@@ -70,9 +96,9 @@ export const UpdateTransaction = () => {
 
             // Clear success message after 3 seconds
             setTimeout(() => setStatus(null), 3000);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            setStatus({ type: 'error', message: 'Failed to update. ensure backend is running.' });
+            setStatus({ type: 'error', message: error.message || 'Failed to update. ensure backend is running.' });
         }
     };
 
@@ -129,7 +155,7 @@ export const UpdateTransaction = () => {
                         />
                     </div>
                     <button
-                        onClick={handleShowTransactions}
+                        onClick={() => handleShowTransactions()}
                         className="w-full md:w-auto px-6 py-3.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-all shadow-lg shadow-purple-600/20 active:scale-[0.98] flex items-center justify-center gap-2"
                     >
                         <Search size={20} />
@@ -149,6 +175,7 @@ export const UpdateTransaction = () => {
                             <thead className="bg-slate-50 dark:bg-white/5 uppercase font-medium text-xs sticky top-0 backdrop-blur-md">
                                 <tr>
                                     <th className="p-3">Date</th>
+                                    <th className="p-3">Category</th>
                                     <th className="p-3">Description</th>
                                     <th className="p-3 text-right">Amount</th>
                                 </tr>
@@ -171,12 +198,15 @@ export const UpdateTransaction = () => {
                                             key={expense.id}
                                             onClick={() => handleRowClick(expense)}
                                             className={`cursor-pointer transition-colors ${selectedExpense?.id === expense.id
-                                                    ? 'bg-purple-50 dark:bg-purple-900/20'
-                                                    : 'hover:bg-slate-50 dark:hover:bg-white/[0.02]'
+                                                ? 'bg-purple-50 dark:bg-purple-900/20'
+                                                : 'hover:bg-slate-50 dark:hover:bg-white/[0.02]'
                                                 }`}
                                         >
                                             <td className="p-3 whitespace-nowrap">
                                                 {new Date(expense.date).toLocaleDateString()}
+                                            </td>
+                                            <td className="p-3 text-slate-600 dark:text-slate-400 text-xs">
+                                                {expense.category}
                                             </td>
                                             <td className="p-3 font-medium text-slate-800 dark:text-white">
                                                 {expense.description}
@@ -201,8 +231,8 @@ export const UpdateTransaction = () => {
 
                     {status && (
                         <div className={`mb-4 p-3 rounded-xl flex items-center gap-2 text-sm font-medium ${status.type === 'success'
-                                ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                            ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                            : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
                             }`}>
                             {status.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
                             {status.message}
@@ -229,6 +259,44 @@ export const UpdateTransaction = () => {
                                     onChange={(e) => setEditDescription(e.target.value)}
                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-slate-900 dark:text-white"
                                 />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Date</label>
+                                    <input
+                                        type="date"
+                                        value={editDate}
+                                        onChange={(e) => setEditDate(e.target.value)}
+                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-slate-900 dark:text-white"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Category</label>
+                                    <select
+                                        value={editCategory}
+                                        onChange={(e) => setEditCategory(e.target.value as Category)}
+                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-slate-900 dark:text-white"
+                                    >
+                                        {CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Payment Method</label>
+                                <select
+                                    value={editPaymentMethod}
+                                    onChange={(e) => setEditPaymentMethod(e.target.value as PaymentMethod)}
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-slate-900 dark:text-white"
+                                >
+                                    {PAYMENT_METHODS.map(method => (
+                                        <option key={method} value={method}>{method}</option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="pt-4 space-y-3">

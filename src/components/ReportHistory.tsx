@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useExpense } from '../context/ExpenseContext';
 import { FileText, FileSpreadsheet, Calendar, Search } from 'lucide-react';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
@@ -10,6 +10,12 @@ export const ReportHistory = () => {
     const [endDate, setEndDate] = useState('');
     const [displayedExpenses, setDisplayedExpenses] = useState<Expense[]>([]);
     const [hasSearched, setHasSearched] = useState(false);
+    // Auto-refresh results when expenses change (e.g. after edit/delete)
+    useEffect(() => {
+        if (hasSearched) {
+            handleShowReport();
+        }
+    }, [expenses]);
 
     const handleShowReport = () => {
         if (!startDate || !endDate) {

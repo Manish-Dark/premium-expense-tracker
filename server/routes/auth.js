@@ -19,8 +19,8 @@ router.post('/login', async (req, res) => {
         // Check for existing user
         const user = await User.findOne({ username });
         if (!user) {
-            // Security: Don't reveal if user exists
-            return res.status(400).json({ message: 'Invalid credentials' });
+            console.log(`Login failed: User '${username}' not found`);
+            return res.status(400).json({ message: 'User not found' });
         }
 
         // Validate password (Hybrid: Support legacy hashes and new plain text)
@@ -32,7 +32,8 @@ router.post('/login', async (req, res) => {
         }
 
         if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+            console.log(`Login failed: Incorrect password for '${username}'`);
+            return res.status(400).json({ message: 'Invalid password' });
         }
 
         // Create token

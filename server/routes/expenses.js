@@ -72,30 +72,39 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
     const { description, amount, category, date, paymentMethod } = req.body;
 
+    console.log('--- PUT /api/expenses/:id Request ---');
+    console.log('ID:', req.params.id);
+    console.log('Body:', req.body);
+    console.log('User:', req.user.id);
+
     try {
-        let expense = await Expense.findById(req.params.id);
-
-        if (!expense) {
-            return res.status(404).json({ message: 'Expense not found' });
-        }
-
-        // Make sure user owns expense
-        if (expense.user.toString() !== req.user.id) {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
-
         const expenseFields = {};
-        if (description) expenseFields.description = description;
-        if (amount) expenseFields.amount = amount;
-        if (category) expenseFields.category = category;
-        if (date) expenseFields.date = date;
-        if (paymentMethod) expenseFields.paymentMethod = paymentMethod;
+        if (description !== undefined) expenseFields.description = description;
+        if (amount !== undefined) expenseFields.amount = amount;
+        if (category !== undefined) expenseFields.category = category;
+        if (date !== undefined) expenseFields.date = date;
+        if (paymentMethod !== undefined) expenseFields.paymentMethod = paymentMethod;
 
-        expense = await Expense.findByIdAndUpdate(
-            req.params.id,
+        console.log('Constructed Fields:', expenseFields);
+
+        // Construct query: Admin can update by ID only, User must match ID and User ID
+        const query = { _id: req.params.id };
+        if (req.user.role !== 'admin') {
+            query.user = req.user.id;
+        }
+
+        const expense = await Expense.findOneAndUpdate(
+            query,
             { $set: expenseFields },
             { new: true }
         );
+
+        if (!expense) {
+            console.log('Update failed: Expense not found or user not authorized');
+            return res.status(404).json({ message: 'Expense not found or not authorized' });
+        }
+
+        console.log('Update Result:', expense);
 
         res.json({
             id: expense._id,
@@ -107,7 +116,7 @@ router.put('/:id', auth, async (req, res) => {
             username: expense.username
         });
     } catch (err) {
-        console.error(err);
+        console.error('Update Error:', err);
         res.status(500).json({ message: 'Server error' });
     }
 });
