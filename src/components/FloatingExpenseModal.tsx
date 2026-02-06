@@ -71,6 +71,7 @@ export const FloatingExpenseModal = ({ isOpen: externalIsOpen, onClose: external
                 description: description || category,
                 category,
                 paymentMethod,
+                date: new Date().toISOString()
             });
         }
 
