@@ -10,13 +10,6 @@ export const ReportHistory = () => {
     const [endDate, setEndDate] = useState('');
     const [displayedExpenses, setDisplayedExpenses] = useState<Expense[]>([]);
     const [hasSearched, setHasSearched] = useState(false);
-    // Auto-refresh results when expenses change (e.g. after edit/delete)
-    useEffect(() => {
-        if (hasSearched) {
-            handleShowReport();
-        }
-    }, [expenses]);
-
     const handleShowReport = () => {
         if (!startDate || !endDate) {
             alert("Please select both start and end dates.");
@@ -35,6 +28,14 @@ export const ReportHistory = () => {
         setDisplayedExpenses(filtered);
         setHasSearched(true);
     };
+
+    // Auto-refresh results when expenses change (e.g. after edit/delete)
+    // We omit handleShowReport from deps to avoid infinite loops when expenses change
+    useEffect(() => {
+        if (hasSearched) {
+            handleShowReport();
+        }
+    }, [expenses]);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">

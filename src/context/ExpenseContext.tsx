@@ -15,6 +15,7 @@ interface ExpenseContextType {
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useExpense = () => {
     const context = useContext(ExpenseContext);
     if (!context) {

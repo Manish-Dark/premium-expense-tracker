@@ -48,9 +48,9 @@ export const FloatingExpenseModal = ({ isOpen: externalIsOpen, onClose: external
     useEffect(() => {
         if (!showModal) {
             setAmount('');
-            setDescription('');
             setCategory('Food');
             setPaymentMethod('Zomato');
+            setDescription('');
         }
     }, [showModal]);
 

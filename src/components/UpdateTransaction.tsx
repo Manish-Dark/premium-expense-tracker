@@ -22,13 +22,6 @@ export const UpdateTransaction = () => {
     // UI Feedback
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
-    // Auto-refresh results when expenses change
-    useEffect(() => {
-        if (hasSearched) {
-            handleShowTransactions(true);
-        }
-    }, [expenses]);
-
     const handleShowTransactions = (keepSelection = false) => {
         if (!startDate || !endDate) {
             alert("Please select both start and end dates.");
@@ -51,6 +44,14 @@ export const UpdateTransaction = () => {
             setSelectedExpense(null); // Clear selection on new search
         }
     };
+
+    // Auto-refresh results when expenses change
+    // We omit handleShowTransactions from deps to avoid infinite loops when expenses change
+    useEffect(() => {
+        if (hasSearched) {
+            handleShowTransactions(true);
+        }
+    }, [expenses]);
 
     const handleRowClick = (expense: Expense) => {
         setSelectedExpense(expense);
@@ -96,9 +97,10 @@ export const UpdateTransaction = () => {
 
             // Clear success message after 3 seconds
             setTimeout(() => setStatus(null), 3000);
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            setStatus({ type: 'error', message: error.message || 'Failed to update. ensure backend is running.' });
+            const errorMessage = error instanceof Error ? error.message : 'Failed to update transaction.';
+            setStatus({ type: 'error', message: errorMessage });
         }
     };
 

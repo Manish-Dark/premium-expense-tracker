@@ -6,14 +6,14 @@ export interface User {
     id: string;
     username: string;
     role: 'admin' | 'user';
-    password?: string; // Optional: specific to admin view
+    password?: string;
     createdAt?: string;
 }
 
 interface AuthContextType {
     isAuthenticated: boolean;
     user: User | null;
-    users: User[]; // List of managed users (admin only)
+    users: User[];
     login: (username: string, pass: string) => Promise<boolean>;
     logout: () => void;
     addUser: (user: Omit<User, 'id' | 'role'>) => Promise<void>;
@@ -28,37 +28,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [user, setUser] = useState<User | null>(null);
     const [users, setUsers] = useState<User[]>([]);
 
-    // Check for persisted session and validate token
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            fetch(`${API_BASE_URL}/api/auth/user`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-                .then(res => {
-                    if (res.ok) return res.json();
-                    throw new Error('Invalid token');
-                })
-                .then((userData: User) => {
-                    setIsAuthenticated(true);
-                    setUser(userData);
-                })
-                .catch(() => {
-                    logout(); // Invalid token
-                });
-        }
-    }, []);
+    const logout = () => {
+        setIsAuthenticated(false);
+        setUser(null);
+        setUsers([]);
+        localStorage.removeItem('token');
+    };
 
-    // Load users if admin
-    useEffect(() => {
-        if (isAuthenticated && user?.role === 'admin') {
-            fetchUsers();
-        } else {
-            setUsers([]);
-        }
-    }, [isAuthenticated, user]);
-
-    const fetchUsers = async () => {
+    const fetchUsers = React.useCallback(async () => {
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${API_BASE_URL}/api/users`, {
@@ -71,7 +48,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } catch (error) {
             console.error('Failed to fetch users', error);
         }
-    };
+    }, []);
+
+    // Load users if admin
+    useEffect(() => {
+        if (isAuthenticated && user?.role === 'admin') {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            fetchUsers();
+        } else {
+            setUsers([]);
+        }
+    }, [isAuthenticated, user?.role, fetchUsers]);
 
     const login = async (username: string, pass: string): Promise<boolean> => {
         try {
@@ -95,16 +82,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const logout = () => {
-        setIsAuthenticated(false);
-        setUser(null);
-        setUsers([]);
-        localStorage.removeItem('token');
-    };
-
     // --- Admin Functions ---
 
-    const addUser = async (newUser: any) => {
+    const addUser = async (newUser: Omit<User, 'id' | 'role'>) => {
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${API_BASE_URL}/api/users`, {
@@ -126,7 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const updateUser = async (id: string, updates: any) => {
+    const updateUser = async (id: string, updates: Partial<Omit<User, 'id' | 'role'>>) => {
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${API_BASE_URL}/api/users/${id}`, {
@@ -181,6 +161,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (context === undefined) {

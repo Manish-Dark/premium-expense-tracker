@@ -15,3 +15,27 @@ body {
   @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-fuchsia-50 transition-colors duration-300;
   -webkit-font-smoothing: antialiased;
 }
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes float-delayed {
+  0% { transform: translateY(-15px); }
+  50% { transform: translateY(0px); }
+  100% { transform: translateY(-15px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 7s ease-in-out infinite;
+}
+
+.glass-panel {
+  @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 shadow-2xl;
+}

@@ -29,28 +29,34 @@ const MainLayout: React.FC = () => {
   const { logout, user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col items-center py-10 px-4 transition-colors duration-300">
-      <div className="w-full max-w-5xl">
-        <header className="mb-8 flex justify-between items-center bg-white/50 dark:bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col items-center py-4 md:py-10 px-4 transition-colors duration-500 overflow-hidden relative">
+      {/* Background ambient glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none transition-all duration-1000"></div>
+
+      <div className="w-full max-w-5xl relative z-10">
+        <header className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 md:p-6 rounded-3xl border border-white/20 dark:border-slate-800/50 shadow-lg gap-4 sticky top-4 z-50 transition-all hover:shadow-xl">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 dark:from-indigo-400 dark:via-purple-400 dark:to-fuchsia-400 bg-clip-text text-transparent flex items-center gap-2">
               ExpenseTracker
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">
-              Welcome, {user?.username}
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">
+              Welcome back, <span className="font-bold text-slate-700 dark:text-slate-300">{user?.username}</span>
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
             <button
               onClick={logout}
-              className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              className="px-5 py-2.5 text-sm font-bold tracking-wide text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all hover:-translate-y-0.5 active:translate-y-0 hover:shadow-sm"
             >
               Logout
             </button>
           </div>
         </header>
-        <Dashboard />
+
+        <main className="bg-white/40 dark:bg-slate-900/40 rounded-3xl p-4 sm:p-6 md:p-8 backdrop-blur-sm border border-white/10 dark:border-slate-800/30 shadow-sm relative overflow-hidden">
+          <Dashboard />
+        </main>
       </div>
     </div>
   );
