@@ -28,6 +28,7 @@ export const FloatingExpenseModal = ({ isOpen: externalIsOpen, onClose: external
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState<Category>('Food');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Zomato');
+    const [date, setDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
 
     // Effect to populate form when editing
     useEffect(() => {
@@ -36,11 +37,7 @@ export const FloatingExpenseModal = ({ isOpen: externalIsOpen, onClose: external
             setDescription(expenseToEdit.description);
             setCategory(expenseToEdit.category);
             setPaymentMethod(expenseToEdit.paymentMethod);
-        } else {
-            // Reset if opening for "Add" (only if not already set by user interaction, but here we assume a fresh open implies reset or passed prop implies value)
-            if (!showModal) {
-                // When modal closes, reset. But we can also check if just opened without edit.
-            }
+            setDate(expenseToEdit.date.split('T')[0]);
         }
     }, [expenseToEdit, showModal]);
 
@@ -48,9 +45,10 @@ export const FloatingExpenseModal = ({ isOpen: externalIsOpen, onClose: external
     useEffect(() => {
         if (!showModal) {
             setAmount('');
+            setDescription('');
             setCategory('Food');
             setPaymentMethod('Zomato');
-            setDescription('');
+            setDate(new Date().toISOString().split('T')[0]);
         }
     }, [showModal]);
 
@@ -58,12 +56,15 @@ export const FloatingExpenseModal = ({ isOpen: externalIsOpen, onClose: external
         e.preventDefault();
         if (!amount) return;
 
+        const dateISO = new Date(date).toISOString();
+
         if (expenseToEdit) {
             await updateExpense(expenseToEdit.id, {
                 amount: parseFloat(amount),
                 description: description || category,
                 category,
                 paymentMethod,
+                date: dateISO
             });
         } else {
             await addExpense({
@@ -71,7 +72,7 @@ export const FloatingExpenseModal = ({ isOpen: externalIsOpen, onClose: external
                 description: description || category,
                 category,
                 paymentMethod,
-                date: new Date().toISOString()
+                date: dateISO
             });
         }
 
@@ -150,6 +151,16 @@ export const FloatingExpenseModal = ({ isOpen: externalIsOpen, onClose: external
                                         onChange={(e) => setDescription(e.target.value)}
                                         className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
                                         placeholder="e.g. Lunch at Office"
+                                    />
+                                </div>
+
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Date</label>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-xl py-3 px-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                                     />
                                 </div>
 

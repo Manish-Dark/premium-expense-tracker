@@ -4,7 +4,14 @@ import * as XLSX from 'xlsx';
 import type { Expense } from '../types';
 
 export const exportToExcel = (expenses: Expense[]) => {
-    const data = expenses.map(expense => {
+    interface ExcelRow {
+        Date: string;
+        Time: string;
+        Application: string;
+        Description: string;
+        Price: number;
+    }
+    const data: ExcelRow[] = expenses.map(expense => {
         const dateObj = new Date(expense.date);
         return {
             Date: dateObj.toLocaleDateString(),
@@ -13,6 +20,16 @@ export const exportToExcel = (expenses: Expense[]) => {
             Description: expense.description,
             Price: expense.amount
         };
+    });
+
+    // Add total row
+    const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+    data.push({
+        Date: '',
+        Time: '',
+        Application: '',
+        Description: 'Total',
+        Price: totalAmount
     });
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -54,6 +71,16 @@ export const exportToPDF = (expenses: Expense[]) => {
             `Rs. ${expense.amount.toFixed(2)}`
         ];
     });
+
+    // Add total row
+    const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+    tableData.push([
+        '',
+        '',
+        '',
+        'Total',
+        `Rs. ${totalAmount.toFixed(2)}`
+    ]);
 
     autoTable(doc, {
         head: [['Date', 'Time', 'Application', 'Description', 'Price']],
